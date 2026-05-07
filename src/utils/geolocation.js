@@ -16,21 +16,26 @@ export function getClientIp(req) {
  */
 export function fetchGeoLocation(ip) {
     return new Promise((resolve) => {
+        console.log(`[GEO] Starting geolocation lookup for IP: ${ip}`);
+
         if (ip === 'unknown' || ip === '::1' || ip.startsWith('127.')) {
+            console.log(`[GEO] IP is localhost, returning local`);
             resolve({ city: 'localhost', region: 'local', country: 'local' });
             return;
         }
 
         // Set a timeout for the entire geolocation lookup
         const timeout = setTimeout(() => {
-            console.warn(`Geolocation lookup timeout for IP: ${ip}`);
+            console.warn(`[GEO] Lookup timeout for IP: ${ip}`);
             resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
         }, 5000);
 
         // Use MaxMind GeoIP2 if credentials are provided
         if (process.env.MAXMIND_ACCOUNT_ID && process.env.MAXMIND_LICENSE_KEY) {
+            console.log(`[GEO] Using MaxMind for IP: ${ip}`);
             fetchMaxMindGeo(ip, timeout, resolve);
         } else {
+            console.log(`[GEO] Using ip-api.com for IP: ${ip}`);
             fetchIpApiGeo(ip, timeout, resolve);
         }
     });
@@ -80,17 +85,22 @@ function fetchMaxMindGeo(ip, timeout, resolve) {
 
 function fetchIpApiGeo(ip, timeout, resolve) {
     const url = `https://ip-api.com/json/${ip}?fields=city,region,country,status`;
+    console.log(`[GEO] Requesting: ${url}`);
     https
         .get(url, (res) => {
+            console.log(`[GEO] Response status code: ${res.statusCode}`);
             let data = '';
             res.on('data', (chunk) => {
                 data += chunk;
             });
             res.on('end', () => {
                 clearTimeout(timeout);
+                console.log(`[GEO] Response data: ${data}`);
                 try {
                     const parsed = JSON.parse(data);
+                    console.log(`[GEO] Parsed response:`, parsed);
                     if (parsed.status === 'success') {
+                        console.log(`[GEO] Success! City=${parsed.city}, Region=${parsed.region}, Country=${parsed.country}`);
                         resolve({
                             city: parsed.city || 'unknown',
                             region: parsed.region || 'unknown',

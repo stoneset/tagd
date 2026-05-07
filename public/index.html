@@ -173,7 +173,7 @@
 
     <div class="container">
         <div class="icon">🏷️</div>
-        <h1 id="pageTitle" data-i18n="title">You found Something</h1>
+        <h1 id="pageTitle" data-i18n="title"></h1>
 
         <p class="message" data-i18n="subtitle">
             This item belongs to me. Please reach out - I'd love to have it back, or just chat about how you found it!
@@ -315,13 +315,17 @@
                 // Get item ID from URL and update title
                 function updateTitleWithItem() {
                     const pathParts = window.location.pathname.split('/');
-                    const itemId = pathParts[2] || 'Something';
+                    const itemId = pathParts[2];
                     const titleElement = document.getElementById('pageTitle');
-                    if (titleElement && itemId !== 'Something') {
-                        // Get base translation and insert item ID
+                    if (titleElement) {
                         const baseTranslation = getNestedValue(translations, 'title') || 'You found something';
-                        // Replace "something" (case-insensitive) with the item ID
-                        titleElement.textContent = baseTranslation.replace(/something/i, itemId);
+                        // If we have a valid itemId, replace "something" with it
+                        if (itemId && itemId !== 'Something') {
+                            titleElement.textContent = baseTranslation.replace(/something/i, itemId);
+                        } else {
+                            // No itemId, just use the default translation
+                            titleElement.textContent = baseTranslation;
+                        }
                     }
                 }
 
