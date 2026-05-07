@@ -53,33 +53,43 @@ function fetchMaxMindGeo(ip, timeout, resolve) {
         }
     };
 
+    console.log(`[GEO] MaxMind requesting: ${url}`);
     https
         .get(url, options, (res) => {
+            console.log(`[GEO] MaxMind response status: ${res.statusCode}`);
             let data = '';
             res.on('data', (chunk) => {
                 data += chunk;
             });
             res.on('end', () => {
                 clearTimeout(timeout);
+                console.log(`[GEO] MaxMind response data: ${data}`);
                 try {
                     const parsed = JSON.parse(data);
                     if (res.statusCode === 200) {
+                        console.log(`[GEO] MaxMind success! City=${parsed.city?.names?.en}, Country=${parsed.country?.names?.en}`);
                         resolve({
                             city: (parsed.city && parsed.city.names && parsed.city.names.en) || 'unknown',
                             region: (parsed.subdivisions && parsed.subdivisions[0] && parsed.subdivisions[0].names && parsed.subdivisions[0].names.en) || 'unknown',
                             country: (parsed.country && parsed.country.names && parsed.country.names.en) || 'unknown',
                         });
                     } else {
-                        resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
+                        console.warn(`[GEO] MaxMind error status ${res.statusCode}, falling back to ip-api.com`);
+                        // Fallback to ip-api.com
+                        fetchIpApiGeo(ip, timeout, resolve);
                     }
                 } catch (e) {
-                    resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
+                    console.warn(`[GEO] MaxMind parse error: ${e.message}, falling back to ip-api.com`);
+                    // Fallback to ip-api.com
+                    fetchIpApiGeo(ip, timeout, resolve);
                 }
             });
         })
-        .on('error', () => {
+        .on('error', (err) => {
             clearTimeout(timeout);
-            resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
+            console.warn(`[GEO] MaxMind request error: ${err.message}, falling back to ip-api.com`);
+            // Fallback to ip-api.com
+            fetchIpApiGeo(ip, timeout, resolve);
         });
 }
 
