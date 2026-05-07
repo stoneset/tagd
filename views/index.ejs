@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tagd - You found
+        <%= itemId || 'something' %>
+    </title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <style>
+         :root {
+            --primary-color: <%=appearance.primaryColor || '#6b7be5' %>;
+            --accent-color: <%=appearance.accentColor || '#5a6bc4' %>;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .language-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .lang-btn {
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .lang-btn:hover {
+            background-color: #4a4a4a;
+        }
+        
+        .lang-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .container {
+            max-width: 500px;
+            background-color: #2a2a2a;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+        
+        .message {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+            color: #b0b0b0;
+        }
+        
+        .info {
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        
+        .info-item {
+            margin-bottom: 16px;
+        }
+        
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            color: #e0e0e0;
+            word-break: break-all;
+        }
+        
+        .info-value a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 32px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            margin: 8px;
+        }
+        
+        .cta-button:hover {
+            background-color: var(--accent-color);
+        }
+        
+        .cta-button.secondary {
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+        }
+        
+        .cta-button.secondary:hover {
+            background-color: #4a4a4a;
+        }
+        
+        .footer {
+            font-size: 12px;
+            color: #666;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="language-selector">
+        <button class="lang-btn active" data-lang="en">English</button>
+        <button class="lang-btn" data-lang="fr">Français</button>
+    </div>
+
+    <div class="container">
+        <div class="icon">🏷️</div>
+        <h1 id="pageTitle">You found <em><%= itemId || 'something' %></em></h1>
+
+        <p class="message" id="subtitle">
+            This item belongs to me. Please reach out - I'd love to have it back!
+        </p>
+
+        <div class="info">
+            <div class="info-item">
+                <div class="info-label">Owner</div>
+                <div class="info-value">
+                    <%= owner.name || 'Name not configured' %>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Email</div>
+                <div class="info-value">
+                    <a href="mailto:<%= owner.email || 'contact@example.com' %>">
+                        <%= owner.email || 'contact@example.com' %>
+                    </a>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Website</div>
+                <div class="info-value">
+                    <a href="<%= owner.website || 'https://example.com' %>" target="_blank">
+                        <%= (owner.website ? new URL(owner.website).hostname : 'example.com') %>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap">
+            <a href="mailto:<%= owner.email || 'contact@example.com' %>" class="cta-button" id="emailBtn">
+                Send Email
+            </a>
+            <a href="<%= owner.website || 'https://example.com' %>" target="_blank" class="cta-button secondary">
+                Visit Website
+            </a>
+        </div>
+
+        <div class="footer">
+            Powered by <a href="https://github.com/stoneset/tagd" target="_blank" style="color: var(--primary-color); text-decoration: none;"><strong>tagd</strong></a> - Open source item recovery system
+        </div>
+    </div>
+
+    <script>
+        let translations = {};
+        let currentLanguage = localStorage.getItem('language') || 'en';
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`/i18n/${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (e) {
+                console.error('Failed to load translations:', e);
+            }
+        }
+
+        function getNestedValue(obj, path) {
+            return path.split('.').reduce((cur, k) => cur && cur[k], obj);
+        }
+
+        function applyTranslations() {
+            const subtitle = getNestedValue(translations, 'subtitle');
+            if (subtitle) document.getElementById('subtitle').textContent = subtitle;
+
+            const email = '<%= owner.email || "contact@example.com" %>';
+            const subject = getNestedValue(translations, 'email.subject') || 'Found your item';
+            const body = getNestedValue(translations, 'email.body') || 'Hi, I found your item!';
+            document.getElementById('emailBtn').href =
+                `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            loadTranslations(lang);
+        }
+
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+        });
+
+        loadTranslations(currentLanguage);
+    </script>
+</body>
+
+</html>

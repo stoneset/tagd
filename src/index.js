@@ -20,6 +20,9 @@ const PORT = process.env.PORT || 3000;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'change-me';
 
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '../views'));
+
 const DATA_DIR = path.join(__dirname, '../data');
 const SCANS_FILE = path.join(DATA_DIR, 'scans.json');
 const CONFIG_FILE = path.join(__dirname, '../config.json');
@@ -41,15 +44,12 @@ app.get('/api/config', (req, res) => {
     res.json(CONFIG);
 });
 
-// GET / - Serve public page
+// GET / - Serve home page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'), (err) => {
-        if (err) {
-            console.error('Error sending home page:', err.message);
-            if (!res.headersSent) {
-                res.status(500).send('Error loading page');
-            }
-        }
+    res.render('index', {
+        owner: CONFIG.owner || {},
+        appearance: CONFIG.appearance || {},
+        itemId: null,
     });
 });
 
@@ -63,14 +63,11 @@ app.get('/itm/:id', async(req, res) => {
         const referer = req.headers['referer'] || 'unknown';
         const timestamp = new Date().toISOString();
 
-        // Debug: Log IP resolution
         console.log(`[DEBUG] X-Forwarded-For: ${req.headers['x-forwarded-for'] || 'not set'}`);
         console.log(`[DEBUG] Remote Address: ${req.socket.remoteAddress}`);
 
-        // Fetch geolocation
         const geo = await fetchGeoLocation(ip);
 
-        // Create scan record
         const scan = {
             itemId,
             ip,
@@ -82,10 +79,8 @@ app.get('/itm/:id', async(req, res) => {
             headers: Object.fromEntries(Object.entries(req.headers)),
         };
 
-        // Save scan
         saveScan(scan, SCANS_FILE);
 
-        // Send Discord notification (non-blocking)
         if (DISCORD_WEBHOOK_URL) {
             sendDiscordNotification(scan, DISCORD_WEBHOOK_URL).catch((err) => {
                 console.error('[DISCORD] Failed to send notification:', err.message);
@@ -94,14 +89,10 @@ app.get('/itm/:id', async(req, res) => {
 
         console.log(`[SCAN] ${itemId} from ${ip} (${geo.city}, ${geo.country})`);
 
-        // Serve public page
-        res.sendFile(path.join(__dirname, '../public/index.html'), (err) => {
-            if (err) {
-                console.error('[ERROR] Failed to send page:', err.code);
-                if (!res.headersSent) {
-                    res.status(500).send('Error loading page');
-                }
-            }
+        res.render('index', {
+            owner: CONFIG.owner || {},
+            appearance: CONFIG.appearance || {},
+            itemId,
         });
     } catch (error) {
         console.error('[ERROR] Scan processing failed:', error.message);
