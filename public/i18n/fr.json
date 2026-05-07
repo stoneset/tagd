@@ -1,0 +1,18 @@
+{
+    "title": "Vous avez trouvé quelque chose",
+    "subtitle": "Cet objet m'appartient. Veuillez me contacter - je serais ravi de le récupérer, ou simplement discuter de comment vous l'avez trouvé !",
+    "labels": {
+        "owner": "Propriétaire",
+        "email": "Email",
+        "website": "Site web"
+    },
+    "buttons": {
+        "sendEmail": "Envoyer un email",
+        "visitWebsite": "Visiter le site"
+    },
+    "email": {
+        "subject": "J'ai trouvé votre objet",
+        "body": "Bonjour,\n\nJ'ai trouvé votre objet avec une étiquette code QR attachée. J'aimerais vous la rendre !\n\nS'il vous plaît, faites-moi savoir le meilleur moyen de vous la restituer.\n\nMerci !"
+    },
+    "footer": "Propulsé par <a href=\"https://github.com/stoneset/tagd\" target=\"_blank\" style=\"color: #6b7be5; text-decoration: none;\"><strong>tagd</strong></a> - Système open source de récupération d'objets"
+}

@@ -1,0 +1,21 @@
+{
+  "app": {
+    "title": "tagd"
+  },
+  "owner": {
+    "name": "Your Name",
+    "email": "your-email@example.com",
+    "website": "https://your-website.com"
+  },
+  "appearance": {
+    "primaryColor": "#6b7be5",
+    "accentColor": "#5a6bc4",
+    "darkMode": true
+  },
+  "locales": ["en", "fr"],
+  "rateLimit": {
+    "enabled": true,
+    "windowMs": 900000,
+    "maxRequests": 10
+  }
+}
