@@ -63,6 +63,10 @@ app.get('/itm/:id', async(req, res) => {
         const referer = req.headers['referer'] || 'unknown';
         const timestamp = new Date().toISOString();
 
+        // Debug: Log IP resolution
+        console.log(`[DEBUG] X-Forwarded-For: ${req.headers['x-forwarded-for'] || 'not set'}`);
+        console.log(`[DEBUG] Remote Address: ${req.socket.remoteAddress}`);
+
         // Fetch geolocation
         const geo = await fetchGeoLocation(ip);
 

@@ -318,8 +318,10 @@
                     const itemId = pathParts[2] || 'Something';
                     const titleElement = document.getElementById('pageTitle');
                     if (titleElement && itemId !== 'Something') {
-                        // Replace "Something" with the item ID
-                        titleElement.textContent = titleElement.textContent.replace('Something', itemId);
+                        // Get base translation and insert item ID
+                        const baseTranslation = getNestedValue(translations, 'title') || 'You found something';
+                        // Replace "something" (case-insensitive) with the item ID
+                        titleElement.textContent = baseTranslation.replace(/something/i, itemId);
                     }
                 }
 

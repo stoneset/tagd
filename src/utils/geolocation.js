@@ -97,15 +97,18 @@ function fetchIpApiGeo(ip, timeout, resolve) {
                             country: parsed.country || 'unknown',
                         });
                     } else {
+                        console.warn(`[GEO] ip-api.com returned status: ${parsed.status} for IP: ${ip}`);
                         resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
                     }
                 } catch (e) {
+                    console.warn(`[GEO] Parse error for IP ${ip}: ${e.message}`);
                     resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
                 }
             });
         })
-        .on('error', () => {
+        .on('error', (err) => {
             clearTimeout(timeout);
+            console.warn(`[GEO] Request error for IP ${ip}: ${err.message}`);
             resolve({ city: 'unknown', region: 'unknown', country: 'unknown' });
         });
 }
