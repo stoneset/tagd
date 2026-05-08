@@ -48,6 +48,7 @@ import ('./constants.js');
             owner: CONFIG.owner || {},
             appearance: CONFIG.appearance || {},
             itemId: null,
+            itemName: null,
         });
     });
 
