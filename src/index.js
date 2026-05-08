@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { loadConfig, initializeScansFile, saveScan, loadScans } from './utils/storage.js';
 import { rateLimitMiddleware } from './utils/ratelimit.js';
@@ -9,6 +10,7 @@ import { sendDiscordNotification } from './utils/discord.js';
 import { sendEmailNotification } from './utils/email.js';
 import { error as logError, info as logInfo } from './utils/logger.js';
 import { loadItems, isValidItem, getItemName } from './utils/items.js';
+import { initializeI18n, getTranslations } from './utils/i18n.js';
 
 const __filename = fileURLToPath(
     import.meta.url);
@@ -30,6 +32,8 @@ import ('./constants.js');
     initializeScansFile(SCANS_FILE);
     const ITEMS_FILE = path.join(DATA_DIR, 'items.csv');
     const ITEMS_MAP = loadItems(ITEMS_FILE);
+    initializeI18n(PUBLIC_DIR);
+    logInfo('[I18N]', 'i18next initialized');
 
     // Middleware
     app.use(express.json());
@@ -44,11 +48,14 @@ import ('./constants.js');
 
     // GET / - Serve home page
     app.get('/', (req, res) => {
+        const enTranslations = getTranslations('en');
+        const frTranslations = getTranslations('fr');
         res.render('index', {
             owner: CONFIG.owner || {},
             appearance: CONFIG.appearance || {},
             itemId: null,
             itemName: null,
+            i18n: { en: enTranslations, fr: frTranslations },
         });
     });
 
@@ -98,11 +105,14 @@ import ('./constants.js');
                 logInfo('[SCAN]', `Unknown item ${itemId} from ${ip} (logged, no notif)`);
             }
 
+            const enTranslations = getTranslations('en');
+            const frTranslations = getTranslations('fr');
             res.render('index', {
                 owner: CONFIG.owner || {},
                 appearance: CONFIG.appearance || {},
                 itemId,
                 itemName: itemName || 'something',
+                i18n: { en: enTranslations, fr: frTranslations },
             });
         } catch (error) {
             logError('[ERROR]', `Scan processing failed: ${error.message}`);

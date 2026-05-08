@@ -172,7 +172,7 @@
         <h1 id="pageTitle">You found <em><%= itemName || 'something' %></em></h1>
 
         <p class="message" id="subtitle">
-            This item belongs to me. Please reach out - I'd love to have it back!
+            This item belongs to me. Please reach out - I'd love to have it back, or just chat about how you found it!
         </p>
 
         <div class="info">
@@ -215,77 +215,63 @@
     </div>
 
     <script>
-        let translations = {};
+        // i18n data loaded inline from server
+        const i18nData = <%- JSON.stringify(i18n) %>;
         let currentLanguage = localStorage.getItem('language') || 'en';
+        let translations = i18nData[currentLanguage] || i18nData.en;
 
-        async function loadTranslations(lang) {
-            try {
-                const response = await fetch(`/i18n/${lang}.json`);
-                translations = await response.json();
-                applyTranslations();
-            } catch (e) {
-                console.error('Failed to load translations:', e);
+        // Simple translation getter with fallback
+        function t(key, fallback = key) {
+            const keys = key.split('.');
+            let value = translations;
+            for (const k of keys) {
+                value = value && value[k];
             }
-        }
-
-        function getNestedValue(obj, path) {
-            return path.split('.').reduce((cur, k) => cur && cur[k], obj);
+            return value || fallback;
         }
 
         function applyTranslations() {
-            const title = getNestedValue(translations, 'title');
             const itemName = '<%= itemName %>';
-            if (title) {
-                document.getElementById('pageTitle').innerHTML = `${title} <em>${itemName || 'something'}</em>`;
-            }
-
-            const subtitle = getNestedValue(translations, 'subtitle');
-            if (subtitle) document.getElementById('subtitle').textContent = subtitle;
-
-            // Translate labels
-            const ownerLabel = getNestedValue(translations, 'labels.owner');
-            if (ownerLabel) document.getElementById('ownerLabel').textContent = ownerLabel;
-
-            const emailLabel = getNestedValue(translations, 'labels.email');
-            if (emailLabel) document.getElementById('emailLabel').textContent = emailLabel;
-
-            const websiteLabel = getNestedValue(translations, 'labels.website');
-            if (websiteLabel) document.getElementById('websiteLabel').textContent = websiteLabel;
-
-            // Translate buttons
-            const sendEmailBtn = getNestedValue(translations, 'buttons.sendEmail');
-            if (sendEmailBtn) document.getElementById('sendEmailBtn').textContent = sendEmailBtn;
-
-            const visitWebsiteBtn = getNestedValue(translations, 'buttons.visitWebsite');
-            if (visitWebsiteBtn) document.getElementById('visitWebsiteBtn').textContent = visitWebsiteBtn;
-
-            // Translate footer
-            const footer = getNestedValue(translations, 'footer');
-            if (footer) document.getElementById('footer').innerHTML = footer;
+            document.getElementById('pageTitle').innerHTML = `${t('title', 'You found')} <em>${itemName || 'something'}</em>`;
+            document.getElementById('subtitle').textContent = t('subtitle', 'This item belongs to me. Please reach out!');
+            document.getElementById('ownerLabel').textContent = t('labels.owner', 'Owner');
+            document.getElementById('emailLabel').textContent = t('labels.email', 'Email');
+            document.getElementById('websiteLabel').textContent = t('labels.website', 'Website');
+            document.getElementById('sendEmailBtn').textContent = t('buttons.sendEmail', 'Send Email');
+            document.getElementById('visitWebsiteBtn').textContent = t('buttons.visitWebsite', 'Visit Website');
+            document.getElementById('footer').innerHTML = t('footer', 'Powered by <a href="https://github.com/stoneset/tagd" target="_blank" style="color: var(--primary-color); text-decoration: none;"><strong>tagd</strong></a> - Open source item recovery system');
 
             // Update email links
             const email = '<%= owner.email || "contact@example.com" %>';
-            const subject = getNestedValue(translations, 'email.subject') || 'Found your item';
-            const body = getNestedValue(translations, 'email.body') || 'Hi, I found your item!';
+            const subject = t('email.subject', 'Found your item');
+            const body = t('email.body', 'Hi, I found your item!');
             const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             document.getElementById('emailBtn').href = mailtoUrl;
             document.getElementById('emailLink').href = mailtoUrl;
         }
 
         function setLanguage(lang) {
+            if (!i18nData[lang]) lang = 'en';
             currentLanguage = lang;
             localStorage.setItem('language', lang);
+            translations = i18nData[lang];
+            applyTranslations();
+            updateLanguageButtons();
+        }
+
+        function updateLanguageButtons() {
             document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.lang === lang);
+                btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
             });
-            loadTranslations(lang);
         }
 
         document.querySelectorAll('.lang-btn').forEach(btn => {
             btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
         });
 
-        loadTranslations(currentLanguage);
+        // Apply initial translations
+        applyTranslations();
+        updateLanguageButtons();
     </script>
 </body>
 
