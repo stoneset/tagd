@@ -24,7 +24,6 @@ export function rateLimitMiddleware(config) {
         const recentRequests = requests.filter(time => now - time < windowMs);
 
         if (recentRequests.length >= maxRequests) {
-            console.warn(`[RATE LIMIT] IP ${ip} exceeded limit`);
             return res.status(429).json({ error: 'Too many requests. Please try again later.' });
         }
 

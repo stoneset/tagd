@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "itemId": "K001",
+    "itemName": "Trousseau de clés",
+    "ip": "::ffff:127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0",
+    "acceptLanguage": "fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7",
+    "referer": "unknown",
+    "timestamp": "2026-05-08T05:33:29.784Z",
+    "geo": {
+      "city": "unknown",
+      "region": "unknown",
+      "country": "unknown"
+    },
+    "headers": {
+      "host": "localhost:3000",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0",
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "accept-language": "fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7",
+      "accept-encoding": "gzip, deflate, br, zstd",
+      "connection": "keep-alive",
+      "cookie": "_pk_id.3.1fff=44c7fcc8c65cc85b.1776229508.",
+      "upgrade-insecure-requests": "1",
+      "sec-fetch-dest": "document",
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-site": "none",
+      "sec-fetch-user": "?1",
+      "if-none-match": "W/\"24d7-1ZLL44Pr1Sn9NG4aHZpKY2gKWno\"",
+      "priority": "u=0, i"
+    }
+  }
+]

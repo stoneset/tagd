@@ -17,5 +17,15 @@
     "enabled": true,
     "windowMs": 900000,
     "maxRequests": 10
+  },
+  "smtp": {
+    "enabled": false,
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "secure": false,
+    "user": "your-email@gmail.com",
+    "pass": "your-app-password",
+    "from": "your-email@gmail.com",
+    "to": "admin@example.com"
   }
 }

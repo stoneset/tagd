@@ -1,8 +1,9 @@
-/**
- * Send Discord notification for scan events
- */
+import { error as logError } from './logger.js';
+
 export async function sendDiscordNotification(scan, webhookUrl) {
-    if (!webhookUrl) return;
+    if (!webhookUrl) {
+        return;
+    }
 
     const geo = scan.geo;
     const geoText = `${geo.city}, ${geo.region}, ${geo.country}`;
@@ -10,10 +11,10 @@ export async function sendDiscordNotification(scan, webhookUrl) {
     const timestamp = new Date(scan.timestamp).toLocaleString();
 
     const embed = {
-        title: '🔍 QR Code Scanned',
+        title: `🔍 ${scan.itemName} Found!`,
+        description: `Item ID: ${scan.itemId}`,
         color: 0x5865f2,
         fields: [
-            { name: 'Item ID', value: scan.itemId, inline: true },
             { name: 'IP Address', value: scan.ip, inline: true },
             { name: 'Location', value: geoText, inline: true },
             { name: 'User Agent', value: userAgent, inline: false },
@@ -24,12 +25,16 @@ export async function sendDiscordNotification(scan, webhookUrl) {
     };
 
     try {
-        await fetch(webhookUrl, {
+        const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ embeds: [embed] }),
         });
+
+        if (!response.ok) {
+            logError('[DISCORD]', `Webhook returned ${response.status}: ${response.statusText}`);
+        }
     } catch (error) {
-        console.error('Failed to send Discord notification:', error.message);
+        logError('[DISCORD]', `Failed to send notification: ${error.message}`);
     }
 }
