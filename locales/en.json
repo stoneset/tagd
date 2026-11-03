@@ -1,0 +1,21 @@
+{
+    "languageName": "English",
+    "title": "You found",
+    "something": "something",
+    "subtitle": "This item belongs to me. Please reach out - I'd love to have it back, or just hear how you found it!",
+    "labels": {
+        "owner": "Owner",
+        "email": "Email",
+        "website": "Website"
+    },
+    "buttons": {
+        "sendEmail": "Send email",
+        "visitWebsite": "Visit website"
+    },
+    "email": {
+        "subject": "I found your item",
+        "body": "Hi,\n\nI found your item with a QR code tag on it. I'd love to return it to you!\n\nLet me know the best way to get it back to you.\n\nThanks!"
+    },
+    "poweredBy": "Powered by",
+    "footer": "Open source item recovery system"
+}

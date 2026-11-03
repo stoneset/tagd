@@ -1,25 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= lang %>">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tagd - You found
-        <%= itemName || 'something' %>
-    </title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>tagd - <%= t('title') %> <%= itemName %></title>
+    <link rel="icon" type="image/png" href="/favicon.png">
     <style>
-         :root {
-            --primary-color: <%=appearance.primaryColor || '#6b7be5' %>;
-            --accent-color: <%=appearance.accentColor || '#5a6bc4' %>;
+        :root {
+            --primary: <%= appearance.primaryColor || '#6b7be5' %>;
+            --accent: <%= appearance.accentColor || '#5a6bc4' %>;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
             background-color: #1a1a1a;
@@ -28,251 +23,117 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 72px 20px 20px;
             position: relative;
         }
-        
-        .language-selector {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 8px;
-        }
-        
-        .lang-btn {
+
+        .languages { position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; }
+
+        .languages a {
             background-color: #3a3a3a;
             color: #e0e0e0;
-            border: none;
             padding: 8px 16px;
             border-radius: 6px;
-            cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: all 0.2s;
+            text-decoration: none;
+            transition: background-color 0.2s;
         }
-        
-        .lang-btn:hover {
-            background-color: #4a4a4a;
-        }
-        
-        .lang-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
+
+        .languages a:hover { background-color: #4a4a4a; }
+        .languages a.active { background-color: var(--primary); color: white; }
+
         .container {
             max-width: 500px;
+            width: 100%;
             background-color: #2a2a2a;
             border-radius: 12px;
             padding: 40px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
-        
-        .icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: #fff;
-        }
-        
-        .message {
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 32px;
-            color: #b0b0b0;
-        }
-        
-        .info {
-            background-color: #1a1a1a;
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 24px;
-            text-align: left;
-        }
-        
-        .info-item {
-            margin-bottom: 16px;
-        }
-        
-        .info-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .info-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #888;
-            margin-bottom: 4px;
-        }
-        
-        .info-value {
-            font-size: 16px;
-            color: #e0e0e0;
-            word-break: break-all;
-        }
-        
-        .info-value a {
-            color: var(--primary-color);
-            text-decoration: none;
-        }
-        
-        .info-value a:hover {
-            text-decoration: underline;
-        }
-        
-        .cta-button {
+
+        .icon { font-size: 64px; margin-bottom: 20px; }
+        h1 { font-size: 28px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+        .message { font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: #b0b0b0; }
+
+        .info { background-color: #1a1a1a; border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: left; }
+        .info-item + .info-item { margin-top: 16px; }
+        .info-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+        .info-value { font-size: 16px; color: #e0e0e0; word-break: break-all; }
+        .info-value a { color: var(--primary); text-decoration: none; }
+        .info-value a:hover { text-decoration: underline; }
+
+        .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+        .cta {
             display: inline-block;
-            background-color: var(--primary-color);
+            background-color: var(--primary);
             color: white;
             padding: 12px 32px;
             border-radius: 6px;
             text-decoration: none;
             font-weight: 600;
             transition: background-color 0.2s;
-            margin: 8px;
         }
-        
-        .cta-button:hover {
-            background-color: var(--accent-color);
-        }
-        
-        .cta-button.secondary {
-            background-color: #3a3a3a;
-            color: #e0e0e0;
-        }
-        
-        .cta-button.secondary:hover {
-            background-color: #4a4a4a;
-        }
-        
-        .footer {
-            font-size: 12px;
-            color: #666;
-            margin-top: 24px;
+
+        .cta:hover { background-color: var(--accent); }
+        .cta.secondary { background-color: #3a3a3a; color: #e0e0e0; }
+        .cta.secondary:hover { background-color: #4a4a4a; }
+
+        footer { font-size: 12px; color: #666; margin-top: 24px; }
+        footer a { color: var(--primary); text-decoration: none; }
+
+        @media (max-width: 480px) {
+            .container { padding: 28px 20px; }
         }
     </style>
 </head>
 
 <body>
-    <div class="language-selector">
-        <button class="lang-btn active" data-lang="en">English</button>
-        <button class="lang-btn" data-lang="fr">Français</button>
-    </div>
+    <nav class="languages">
+        <% for (const l of languages) { %>
+            <a href="?lang=<%= l.code %>" hreflang="<%= l.code %>" <% if (l.code === lang) { %>class="active" aria-current="true"<% } %>><%= l.name %></a>
+        <% } %>
+    </nav>
 
-    <div class="container">
+    <main class="container">
         <div class="icon">🏷️</div>
-        <h1 id="pageTitle">You found <em><%= itemName || 'something' %></em></h1>
+        <h1><%= t('title') %> <em><%= itemName %></em></h1>
+        <p class="message"><%= t('subtitle') %></p>
 
-        <p class="message" id="subtitle">
-            This item belongs to me. Please reach out - I'd love to have it back, or just chat about how you found it!
-        </p>
-
+        <% if (owner.name || owner.email || website) { %>
         <div class="info">
+            <% if (owner.name) { %>
             <div class="info-item">
-                <div class="info-label" id="ownerLabel">Owner</div>
-                <div class="info-value">
-                    <%= owner.name || 'Name not configured' %>
-                </div>
+                <div class="info-label"><%= t('labels.owner') %></div>
+                <div class="info-value"><%= owner.name %></div>
             </div>
+            <% } %>
+            <% if (owner.email) { %>
             <div class="info-item">
-                <div class="info-label" id="emailLabel">Email</div>
-                <div class="info-value">
-                    <a href="mailto:<%= owner.email || 'contact@example.com' %>" id="emailLink">
-                        <%= owner.email || 'contact@example.com' %>
-                    </a>
-                </div>
+                <div class="info-label"><%= t('labels.email') %></div>
+                <div class="info-value"><a href="<%= mailto %>"><%= owner.email %></a></div>
             </div>
+            <% } %>
+            <% if (website) { %>
             <div class="info-item">
-                <div class="info-label" id="websiteLabel">Website</div>
-                <div class="info-value">
-                    <a href="<%= owner.website || 'https://example.com' %>" target="_blank">
-                        <%= (owner.website ? new URL(owner.website).hostname : 'example.com') %>
-                    </a>
-                </div>
+                <div class="info-label"><%= t('labels.website') %></div>
+                <div class="info-value"><a href="<%= website.url %>" target="_blank" rel="noopener"><%= website.host %></a></div>
             </div>
+            <% } %>
+        </div>
+        <% } %>
+
+        <div class="actions">
+            <% if (mailto) { %><a class="cta" href="<%= mailto %>"><%= t('buttons.sendEmail') %></a><% } %>
+            <% if (website) { %><a class="cta secondary" href="<%= website.url %>" target="_blank" rel="noopener"><%= t('buttons.visitWebsite') %></a><% } %>
         </div>
 
-        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap">
-            <a href="mailto:<%= owner.email || 'contact@example.com' %>" class="cta-button" id="emailBtn">
-                <span id="sendEmailBtn">Send Email</span>
-            </a>
-            <a href="<%= owner.website || 'https://example.com' %>" target="_blank" class="cta-button secondary">
-                <span id="visitWebsiteBtn">Visit Website</span>
-            </a>
-        </div>
-
-        <div class="footer" id="footer">
-            Powered by <a href="https://github.com/stoneset/tagd" target="_blank" style="color: var(--primary-color); text-decoration: none;"><strong>tagd</strong></a> - Open source item recovery system
-        </div>
-    </div>
-
-    <script>
-        // i18n data loaded inline from server
-        const i18nData = <%- JSON.stringify(i18n) %>;
-        let currentLanguage = localStorage.getItem('language') || 'en';
-        let translations = i18nData[currentLanguage] || i18nData.en;
-
-        // Simple translation getter with fallback
-        function t(key, fallback = key) {
-            const keys = key.split('.');
-            let value = translations;
-            for (const k of keys) {
-                value = value && value[k];
-            }
-            return value || fallback;
-        }
-
-        function applyTranslations() {
-            const itemName = '<%= itemName %>';
-            document.getElementById('pageTitle').innerHTML = `${t('title', 'You found')} <em>${itemName || 'something'}</em>`;
-            document.getElementById('subtitle').textContent = t('subtitle', 'This item belongs to me. Please reach out!');
-            document.getElementById('ownerLabel').textContent = t('labels.owner', 'Owner');
-            document.getElementById('emailLabel').textContent = t('labels.email', 'Email');
-            document.getElementById('websiteLabel').textContent = t('labels.website', 'Website');
-            document.getElementById('sendEmailBtn').textContent = t('buttons.sendEmail', 'Send Email');
-            document.getElementById('visitWebsiteBtn').textContent = t('buttons.visitWebsite', 'Visit Website');
-            document.getElementById('footer').innerHTML = t('footer', 'Powered by <a href="https://github.com/stoneset/tagd" target="_blank" style="color: var(--primary-color); text-decoration: none;"><strong>tagd</strong></a> - Open source item recovery system');
-
-            // Update email links
-            const email = '<%= owner.email || "contact@example.com" %>';
-            const subject = t('email.subject', 'Found your item');
-            const body = t('email.body', 'Hi, I found your item!');
-            const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            document.getElementById('emailBtn').href = mailtoUrl;
-            document.getElementById('emailLink').href = mailtoUrl;
-        }
-
-        function setLanguage(lang) {
-            if (!i18nData[lang]) lang = 'en';
-            currentLanguage = lang;
-            localStorage.setItem('language', lang);
-            translations = i18nData[lang];
-            applyTranslations();
-            updateLanguageButtons();
-        }
-
-        function updateLanguageButtons() {
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
-            });
-        }
-
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
-        });
-
-        // Apply initial translations
-        applyTranslations();
-        updateLanguageButtons();
-    </script>
+        <footer>
+            <%= t('poweredBy') %> <a href="https://github.com/stoneset/tagd" target="_blank" rel="noopener"><strong>tagd</strong></a> - <%= t('footer') %>
+        </footer>
+    </main>
 </body>
 
 </html>

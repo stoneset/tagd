@@ -1,227 +1,130 @@
+import crypto from 'node:crypto';
+import path from 'node:path';
 import express from 'express';
-import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { loadConfig, initializeScansFile, saveScan, loadScans } from './utils/storage.js';
-import { rateLimitMiddleware } from './utils/ratelimit.js';
-import { getClientIp, fetchGeoLocation } from './utils/geolocation.js';
-import { sendDiscordNotification } from './utils/discord.js';
-import { sendEmailNotification } from './utils/email.js';
-import { error as logError, info as logInfo } from './utils/logger.js';
-import { loadItems, isValidItem, getItemName } from './utils/items.js';
-import { initializeI18n, getTranslations } from './utils/i18n.js';
+import { config, ROOT, DATA_DIR } from './config.js';
+import { log } from './logger.js';
+import { loadItems, normalizeId } from './items.js';
+import { loadLocales, pickLanguage, translator } from './i18n.js';
+import { lookupGeo, normalizeIp } from './geo.js';
+import { createLimiter } from './limiter.js';
+import { createScanStore, filterScans, parseDate, toCsv } from './scans.js';
+import { createNotifier } from './notify.js';
 
-const __filename = fileURLToPath(
-    import.meta.url);
-const __dirname = path.dirname(__filename);
-const envPath = path.join(__dirname, '..', '.env');
-dotenv.config({ path: envPath });
+const items = loadItems(path.join(DATA_DIR, 'items.csv'));
+const locales = loadLocales(path.join(ROOT, 'locales'));
+const store = createScanStore(DATA_DIR);
+const notify = createNotifier(config);
 
-const { PORT, DISCORD_WEBHOOK_URL, ADMIN_TOKEN, DATA_DIR, SCANS_FILE, CONFIG_FILE, CONFIG_EXAMPLE, VIEWS_DIR, PUBLIC_DIR } = await
-import ('./constants.js');
+// Rate limiting never blocks the page (the finder must always see the contact
+// info): it only limits recorded scans per IP and notifications per IP + item.
+const { enabled, windowMs, maxRequests } = config.rateLimit;
+const allowRecord = enabled ? createLimiter(windowMs, maxRequests) : () => true;
+const allowNotify = enabled ? createLimiter(windowMs, 1) : () => true;
 
-(async() => {
-    const app = express();
+const { owner } = config;
+let website = null;
+try {
+    if (owner.website) website = { url: owner.website, host: new URL(owner.website).hostname };
+} catch {
+    log.warn('CONFIG', `owner.website is not a valid URL, hidden from the page: ${owner.website}`);
+}
 
-    app.set('view engine', 'ejs');
-    app.set('views', VIEWS_DIR);
+const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
+app.set('view engine', 'ejs');
+app.set('views', path.join(ROOT, 'views'));
+app.use(express.static(path.join(ROOT, 'public')));
 
-    // Load config
-    const CONFIG = loadConfig(CONFIG_FILE, CONFIG_EXAMPLE);
-    initializeScansFile(SCANS_FILE);
-    const ITEMS_FILE = path.join(DATA_DIR, 'items.csv');
-    const ITEMS_MAP = loadItems(ITEMS_FILE);
-    initializeI18n(PUBLIC_DIR);
-    logInfo('[I18N]', 'i18next initialized');
-
-    // Middleware
-    app.use(express.json());
-    app.use(express.static(PUBLIC_DIR));
-
-    // Routes
-
-    // GET /api/config - Public configuration
-    app.get('/api/config', (req, res) => {
-        res.json(CONFIG);
+function renderPage(req, res, itemName) {
+    const lang = pickLanguage(req, locales);
+    const t = translator(locales, lang);
+    const mailto = owner.email
+        ? `mailto:${owner.email}?subject=${encodeURIComponent(t('email.subject'))}&body=${encodeURIComponent(t('email.body'))}`
+        : null;
+    res.render('index', {
+        lang,
+        t,
+        languages: Object.entries(locales).map(([code, l]) => ({ code, name: l.languageName || code })),
+        itemName: itemName || t('something'),
+        owner,
+        website,
+        mailto,
+        appearance: config.appearance,
     });
+}
 
-    // GET / - Serve home page
-    app.get('/', (req, res) => {
-        const enTranslations = getTranslations('en');
-        const frTranslations = getTranslations('fr');
-        res.render('index', {
-            owner: CONFIG.owner || {},
-            appearance: CONFIG.appearance || {},
-            itemId: null,
-            itemName: null,
-            i18n: { en: enTranslations, fr: frTranslations },
-        });
+async function recordScan(req, itemId, itemName) {
+    const ip = normalizeIp(req.ip);
+    if (!allowRecord(ip)) {
+        log.info('SCAN', `Rate limit reached for ${ip}: scan of ${itemId} not recorded`);
+        return;
+    }
+    const scan = {
+        timestamp: new Date().toISOString(),
+        itemId,
+        itemName: itemName || null,
+        known: Boolean(itemName),
+        ip,
+        userAgent: req.get('user-agent') || null,
+        acceptLanguage: req.get('accept-language') || null,
+        referer: req.get('referer') || null,
+    };
+    scan.geo = await lookupGeo(ip);
+    store.append(scan);
+
+    if (!scan.known) {
+        log.info('SCAN', `Unknown item ${itemId} from ${ip} (recorded, no notification)`);
+        return;
+    }
+    log.info('SCAN', `${itemName} (${itemId}) from ${ip} (${scan.geo.city}, ${scan.geo.country})`);
+    if (allowNotify(`${ip}|${itemId}`)) await notify(scan);
+    else log.info('SCAN', `Notification already sent for ${itemId} / ${ip} in this window`);
+}
+
+app.get('/', (req, res) => renderPage(req, res, null));
+
+app.get('/i/:id', (req, res) => {
+    const itemId = normalizeId(req.params.id).slice(0, 64);
+    const itemName = items.get(itemId) || null;
+    renderPage(req, res, itemName);
+    // Answer first, then geolocate / store / notify in the background.
+    // Switching language reloads the page with ?lang=: not a new scan.
+    if (req.query.lang === undefined) {
+        recordScan(req, itemId, itemName).catch((err) => log.error('SCAN', `Processing failed: ${err.message}`));
+    }
+});
+
+// Admin API (x-admin-token header)
+const tokenDigest = crypto.createHash('sha256').update(config.adminToken).digest();
+function requireAdmin(req, res, next) {
+    const given = crypto.createHash('sha256').update(req.get('x-admin-token') || '').digest();
+    if (!crypto.timingSafeEqual(given, tokenDigest)) return res.status(403).json({ error: 'Unauthorized' });
+    next();
+}
+
+// GET /api/scans?itemId=&from=&to=&format=json|csv  (/api/export kept as an alias)
+app.get(['/api/scans', '/api/export'], requireAdmin, (req, res) => {
+    const { itemId, from, to, format } = req.query;
+    const range = {
+        from: typeof from === 'string' ? parseDate(from) : 0,
+        to: typeof to === 'string' ? parseDate(to, { endOfDay: true }) : Infinity,
+    };
+    if (range.from === null || range.to === null) return res.status(400).json({ error: 'Invalid date in from/to' });
+
+    const scans = filterScans(store.readAll(), {
+        itemId: typeof itemId === 'string' ? normalizeId(itemId) : null,
+        ...range,
     });
+    if (format === 'csv') return res.type('text/csv').attachment('scans.csv').send(toCsv(scans));
+    res.json(scans);
+});
 
-    // GET /i/:id - Log scan and serve public page
-    app.get('/i/:id', rateLimitMiddleware(CONFIG), async(req, res) => {
-        try {
-            const itemId = req.params.id;
-            const isValid = isValidItem(ITEMS_MAP, itemId);
-            const itemName = getItemName(ITEMS_MAP, itemId);
-            const ip = getClientIp(req);
-            const userAgent = req.headers['user-agent'] || 'unknown';
-            const acceptLanguage = req.headers['accept-language'] || 'unknown';
-            const referer = req.headers['referer'] || 'unknown';
-            const timestamp = new Date().toISOString();
+app.use((err, req, res, next) => {
+    log.error('HTTP', err.stack || err.message);
+    res.status(500).send('Internal server error');
+});
 
-            const geo = await fetchGeoLocation(ip);
-
-            const scan = {
-                itemId,
-                itemName: itemName || 'Unknown',
-                ip,
-                userAgent,
-                acceptLanguage,
-                referer,
-                timestamp,
-                geo,
-                headers: Object.fromEntries(Object.entries(req.headers)),
-            };
-
-            saveScan(scan, SCANS_FILE);
-
-            // Only send notifications for valid items
-            if (isValid) {
-                if (DISCORD_WEBHOOK_URL) {
-                    sendDiscordNotification(scan, DISCORD_WEBHOOK_URL).catch((err) => {
-                        logError('[DISCORD]', `Failed to send notification: ${err.message}`);
-                    });
-                }
-
-                if (CONFIG.smtp) {
-                    sendEmailNotification(scan, CONFIG.smtp).catch((err) => {
-                        logError('[EMAIL]', `Failed to send notification: ${err.message}`);
-                    });
-                }
-                logInfo('[SCAN]', `${itemName} (${itemId}) from ${ip} (${geo.city}, ${geo.country})`);
-            } else {
-                logInfo('[SCAN]', `Unknown item ${itemId} from ${ip} (logged, no notif)`);
-            }
-
-            const enTranslations = getTranslations('en');
-            const frTranslations = getTranslations('fr');
-            res.render('index', {
-                owner: CONFIG.owner || {},
-                appearance: CONFIG.appearance || {},
-                itemId,
-                itemName: itemName || 'something',
-                i18n: { en: enTranslations, fr: frTranslations },
-            });
-        } catch (error) {
-            logError('[ERROR]', `Scan processing failed: ${error.message}`);
-            res.status(500).send('Error processing scan');
-        }
-    });
-
-    // GET /api/scans - Get all scans (protected by x-admin-token)
-    // Query params: itemId, from, to (filter by date range)
-    app.get('/api/scans', (req, res) => {
-        const token = req.headers['x-admin-token'];
-
-        if (token !== ADMIN_TOKEN) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-
-        try {
-            let scans = loadScans(SCANS_FILE);
-
-            // Filter by itemId
-            if (req.query.itemId) {
-                scans = scans.filter(scan => scan.itemId === req.query.itemId);
-            }
-
-            // Filter by date range
-            if (req.query.from || req.query.to) {
-                const from = req.query.from ? new Date(req.query.from).getTime() : 0;
-                const to = req.query.to ? new Date(req.query.to).getTime() : Date.now();
-                scans = scans.filter(scan => {
-                    const scanTime = new Date(scan.timestamp).getTime();
-                    return scanTime >= from && scanTime <= to;
-                });
-            }
-
-            res.json(scans);
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to read scans' });
-        }
-    });
-
-    // GET /api/export - Export scans as CSV or JSON
-    // Query params: format (csv|json), itemId, from, to
-    app.get('/api/export', (req, res) => {
-        const token = req.headers['x-admin-token'];
-
-        if (token !== ADMIN_TOKEN) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-
-        try {
-            let scans = loadScans(SCANS_FILE);
-
-            // Filter by itemId
-            if (req.query.itemId) {
-                scans = scans.filter(scan => scan.itemId === req.query.itemId);
-            }
-
-            // Filter by date range
-            if (req.query.from || req.query.to) {
-                const from = req.query.from ? new Date(req.query.from).getTime() : 0;
-                const to = req.query.to ? new Date(req.query.to).getTime() : Date.now();
-                scans = scans.filter(scan => {
-                    const scanTime = new Date(scan.timestamp).getTime();
-                    return scanTime >= from && scanTime <= to;
-                });
-            }
-
-            const format = req.query.format || 'json';
-
-            if (format === 'csv') {
-                // Convert to CSV
-                const headers = ['Item ID', 'IP', 'City', 'Region', 'Country', 'User Agent', 'Timestamp'];
-                const rows = scans.map(scan => [
-                    scan.itemId,
-                    scan.ip,
-                    scan.geo.city,
-                    scan.geo.region,
-                    scan.geo.country,
-                    scan.userAgent,
-                    scan.timestamp,
-                ]);
-
-                const csv = [headers, ...rows]
-                    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-                    .join('\n');
-
-                res.setHeader('Content-Type', 'text/csv');
-                res.setHeader('Content-Disposition', 'attachment; filename="scans.csv"');
-                res.send(csv);
-            } else {
-                // JSON export
-                res.setHeader('Content-Type', 'application/json');
-                res.setHeader('Content-Disposition', 'attachment; filename="scans.json"');
-                res.send(JSON.stringify(scans, null, 2));
-            }
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to export scans' });
-        }
-    });
-
-    // Error handling
-    app.use((err, req, res, next) => {
-        console.error('Error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    });
-
-    // Start server
-    app.listen(PORT, () => {
-        logInfo('[INFO]', `🏷️  tagd server running on http://localhost:${PORT}`);
-        logInfo('[INFO]', `Admin token: ${ADMIN_TOKEN}`);
-    });
-})();
+app.listen(config.port, () => {
+    log.info('INFO', `tagd running on http://localhost:${config.port} (trust proxy: ${config.trustProxy})`);
+});

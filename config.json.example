@@ -1,7 +1,4 @@
 {
-  "app": {
-    "title": "tagd"
-  },
   "owner": {
     "name": "Your Name",
     "email": "your-email@example.com",
@@ -9,10 +6,8 @@
   },
   "appearance": {
     "primaryColor": "#6b7be5",
-    "accentColor": "#5a6bc4",
-    "darkMode": true
+    "accentColor": "#5a6bc4"
   },
-  "locales": ["en", "fr"],
   "rateLimit": {
     "enabled": true,
     "windowMs": 900000,
@@ -20,12 +15,11 @@
   },
   "smtp": {
     "enabled": false,
-    "host": "smtp.gmail.com",
+    "host": "smtp.example.com",
     "port": 587,
     "secure": false,
-    "user": "your-email@gmail.com",
-    "pass": "your-app-password",
-    "from": "your-email@gmail.com",
-    "to": "admin@example.com"
+    "user": "your-email@example.com",
+    "from": "your-email@example.com",
+    "to": "you@example.com"
   }
 }

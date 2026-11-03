@@ -1,0 +1,21 @@
+{
+    "languageName": "Français",
+    "title": "Vous avez trouvé",
+    "something": "quelque chose",
+    "subtitle": "Cet objet m'appartient. N'hésitez pas à me contacter : je serais ravi de le récupérer, ou simplement de savoir comment vous l'avez trouvé !",
+    "labels": {
+        "owner": "Propriétaire",
+        "email": "Email",
+        "website": "Site web"
+    },
+    "buttons": {
+        "sendEmail": "Envoyer un email",
+        "visitWebsite": "Visiter le site"
+    },
+    "email": {
+        "subject": "J'ai trouvé votre objet",
+        "body": "Bonjour,\n\nJ'ai trouvé votre objet, il portait une étiquette avec un QR code. J'aimerais vous le rendre !\n\nDites-moi comment vous le restituer.\n\nMerci !"
+    },
+    "poweredBy": "Propulsé par",
+    "footer": "Système open source de récupération d'objets"
+}

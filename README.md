@@ -1,263 +1,94 @@
-# tagd 🏷️
+# tagd
 
-A self-hosted QR code scan logger with Discord notifications and email alerts. Perfect for tracking found items, personal belongings, or inventory.
+Self-hosted lost-item tags. Stick a QR code on your stuff: whoever finds it lands on a page with your contact info, and you get a Discord and/or email notification with the approximate location of the scan.
 
-## Features
+- Server-rendered page (no client JavaScript), in the finder's browser language (English and French included)
+- Discord webhook and SMTP email notifications
+- Approximate geolocation of scans via ip-api.com
+- Scan log with a small admin API (JSON / CSV export)
+- No database: a CSV of your items and a JSON Lines log
 
-- **QR Code Scanning**: When someone scans a QR code, their details are logged
-- **Geolocation**: Automatically captures location data (city, region, country) from IP addresses
-- **Discord Notifications**: Receive instant notifications on Discord when your item is found
-- **Email Alerts**: Send email notifications to your inbox when scans occur (SMTP configurable)
-- **Admin Dashboard**: Access `/api/scans` with your admin token to view all scan logs
-- **Privacy-Focused**: Minimal data collection, runs on your own server
-- **Zero Dependencies UI**: Beautiful dark HTML interface, no JavaScript framework bloat
+## Requirements
 
-## Quick Start
+Node.js 20.12 or later.
 
-### 1. Clone & Setup
+## Setup
 
 ```bash
-git clone https://github.com/stoneset/tagd.git tagd
-cd tagd
+git clone https://github.com/stoneset/tagd.git && cd tagd
 npm install
+cp .env.example .env                       # secrets: ADMIN_TOKEN (required), Discord webhook, SMTP password
+cp config.json.example config.json         # owner info, colors, rate limit, SMTP server
+cp data/items.csv.example data/items.csv   # your items
+npm start                                  # or: npm run dev (restarts on code changes)
 ```
 
-### 2. Configure Environment & App
+The app refuses to start without `config.json` or with an empty/default `ADMIN_TOKEN` (`openssl rand -hex 32` makes a good one).
 
-**Setup environment variables:**
-```bash
-cp .env.example .env
-```
+### Items and QR codes
 
-Edit `.env` with your configuration:
-
-```env
-PORT=3000
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN
-ADMIN_TOKEN=your-secure-token
-```
-
-### 3. Configure Items
-
-Create `data/items.csv` to define which items should trigger notifications:
+`data/items.csv` lists the tags that trigger notifications:
 
 ```csv
-id,name
-K001,Trousseau de clés
-BP001,Sac à dos rouge
-LAP001,Laptop Dell
+id,name,url
+K001,Trousseau de clés,https://tagd.example.com/i/K001
+BP001,Sac à dos rouge,https://tagd.example.com/i/BP001
 ```
 
-Only scans from items in this CSV will trigger Discord/Email notifications. Other scans are logged but silently.
+- `id` and `name` are required. IDs are case-insensitive.
+- Extra columns are ignored: the `url` column is there so label printing software can bind the QR code to the full URL rather than to the bare ID.
+- `,` and `;` separators both work (Excel with a French locale saves with `;`).
+- Restart the app after editing the file.
 
-### 4. Create QR Codes
+Each QR code points to `https://your-domain/i/<id>`. Tip: an all-uppercase URL (`HTTPS://TAGD.EXAMPLE.COM/I/K001`) lets the QR encoder use alphanumeric mode, which gives a smaller, easier to scan code on small labels.
 
-Generate QR codes pointing to:
-```
-https://your-domain.com/i/ITEM_ID
-```
-
-For example:
-- `https://tagd.example.com/i/K001`
-- `https://tagd.example.com/i/BP001`
-- `https://tagd.example.com/i/LAP001`
-
-Short IDs (3-4 chars) keep QR codes compact and easy to scan.
-
-### 5. Run the Server
-
-**Development:**
-```bash
-npm run dev
-```
-
-**Production:**
-```bash
-npm start
-```
-
-Server runs on `http://localhost:3000`
-
-## Routes
-
-### Public Routes
-
-- **GET `/` - Homepage**
-  Serves the public landing page with owner contact information.
-
-- **GET `/i/:id` - Scan Logger**
-  - Logs the scan with full details (IP, geolocation, user-agent, etc.)
-  - **Sends Discord/Email notifications only if the item ID is in `data/items.csv`**
-  - Serves the public page with owner contact info
-  - No authentication required
-
-### Admin Routes
-
-- **GET `/api/scans` - Get Scans**
-  Returns JSON array of logged scans with optional filtering.
-  
-  **Required Header:**
-  ```
-  x-admin-token: your-secure-token
-  ```
-  
-  **Query Parameters:**
-  - `itemId` - Filter by item ID (e.g., `?itemId=keys-001`)
-  - `from` - Filter from date (ISO 8601, e.g., `?from=2024-01-01`)
-  - `to` - Filter to date (ISO 8601, e.g., `?to=2024-12-31`)
-  
-  **Examples:**
-  ```bash
-  # Get all scans
-  curl -H "x-admin-token: your-secure-token" http://localhost:3000/api/scans
-  
-  # Filter by item
-  curl -H "x-admin-token: your-secure-token" http://localhost:3000/api/scans?itemId=keys-001
-  
-  # Filter by date range
-  curl -H "x-admin-token: your-secure-token" http://localhost:3000/api/scans?from=2024-01-01&to=2024-12-31
-  ```
-
-- **GET `/api/export` - Export Scans**
-  Export scans in CSV or JSON format with optional filtering.
-  
-  **Required Header:**
-  ```
-  x-admin-token: your-secure-token
-  ```
-  
-  **Query Parameters:**
-  - `format` - Export format: `csv` or `json` (default: `json`)
-  - `itemId` - Filter by item ID
-  - `from` - Filter from date (ISO 8601)
-  - `to` - Filter to date (ISO 8601)
-  
-  **Examples:**
-  ```bash
-  # Export all scans as JSON
-  curl -H "x-admin-token: your-secure-token" http://localhost:3000/api/export > scans.json
-  
-  # Export all scans as CSV
-  curl -H "x-admin-token: your-secure-token" http://localhost:3000/api/export?format=csv > scans.csv
-  
-  # Export scans for specific item as CSV
-  curl -H "x-admin-token: your-secure-token" http://localhost:3000/api/export?format=csv&itemId=keys-001 > keys.csv
-  ```
-
-## Logged Data Per Scan
-
-Each scan records:
-- **itemId** - The item identifier from the URL
-- **ip** - Client IP address (x-forwarded-for aware)
-- **userAgent** - Browser/device info
-- **acceptLanguage** - Language preferences
-- **referer** - HTTP referer
-- **timestamp** - ISO 8601 timestamp
-- **geo** - Location data (city, region, country)
-- **headers** - All HTTP request headers
-
-## Discord Notifications
-
-When someone scans your QR code, you'll receive a Discord embed with:
-- Item ID
-- Visitor's IP address
-- Location (city, region, country)
-- Device info (user-agent)
-- Scan timestamp
-- Language preference
-
-## Geolocation
-
-The app automatically captures location data (city, region, country) for each scan using **ip-api.com**.
-
-**ip-api.com:**
-- Accuracy: Good (city-level)
-- Setup: No configuration needed
-- Limitations: 45 requests/minute rate limit
+Scans of IDs not listed in the CSV are recorded but don't trigger a notification.
 
 ## Configuration
 
-All personalization is done through `config.json` (created from `config.json.example`):
+**`.env`** (secrets and deployment):
 
-### Owner Information
-```json
-"owner": {
-  "name": "Your Name",
-  "email": "your-email@example.com",
-  "website": "https://your-website.com"
-}
-```
-These fields are displayed on the public page with contact buttons.
+| Variable | |
+|---|---|
+| `ADMIN_TOKEN` | Required. Protects the admin API. |
+| `PORT` | Default `3000`. |
+| `TRUST_PROXY` | Express [`trust proxy`](https://expressjs.com/en/guide/behind-proxies.html) setting, used to read the visitor's real IP. `loopback` (default) for nginx/Caddy on the same machine, `2` for Cloudflare → nginx → tagd. Wrong value = wrong IPs in your logs. |
+| `DISCORD_WEBHOOK_URL` | Optional. |
+| `SMTP_PASS` | SMTP password, if email notifications are enabled. |
+| `DEBUG` | `true` for verbose logs. |
 
-### Appearance Customization
-```json
-"appearance": {
-  "primaryColor": "#6b7be5",
-  "accentColor": "#5a6bc4"
-}
-```
-Change colors to match your branding. The primary color is used for links, buttons, and highlights. The accent color is used for hover states.
+**`config.json`**:
 
-### Supported Languages
-```json
-"locales": ["en", "fr"]
-```
-Add language codes to make those translation files available. Translations are loaded from `public/i18n/{lang}.json`.
+- `owner`: `name`, `email`, `website` shown on the page (each one is optional, missing ones are hidden).
+- `appearance`: `primaryColor`, `accentColor`.
+- `rateLimit`: `windowMs`, `maxRequests`. The page is always served; the limit applies to recorded scans per IP (`maxRequests` per window), and notifications are sent at most once per item and IP per window.
+- `smtp`: `enabled`, `host`, `port`, `secure` (`true` for port 465), `user`, `from`, `to`.
 
-### Rate Limiting
-```json
-"rateLimit": {
-  "enabled": true,
-  "windowMs": 900000,
-  "maxRequests": 10
-}
-```
-- **enabled**: Turn rate limiting on/off
-- **windowMs**: Time window in milliseconds (default: 900000 = 15 minutes)
-- **maxRequests**: Max requests per IP per window (default: 10)
+Translations live in `locales/<lang>.json`; adding a file adds a language.
 
-Rate limiting is applied to the `/i/:id` endpoint to prevent abuse. When a visitor exceeds the limit, they get a 429 error.
+## Admin API
 
-### Email Notifications (SMTP)
+All admin routes require the `x-admin-token` header.
 
-You can send email notifications when someone scans your QR code. Configure in `config.json`:
+`GET /api/scans` (alias `/api/export`), optional query parameters:
 
-```json
-"smtp": {
-  "enabled": false,
-  "host": "smtp.gmail.com",
-  "port": 587,
-  "secure": false,
-  "user": "your-email@gmail.com",
-  "pass": "your-app-password",
-  "from": "your-email@gmail.com",
-  "to": "admin@example.com"
-}
+- `itemId`: filter on one item
+- `from`, `to`: ISO 8601 dates; a bare date for `to` (`2026-12-31`) includes the whole day
+- `format=csv`: CSV download instead of JSON
+
+```bash
+curl -H "x-admin-token: $TOKEN" "https://tagd.example.com/api/scans?itemId=K001&from=2026-01-01"
+curl -H "x-admin-token: $TOKEN" "https://tagd.example.com/api/scans?format=csv" -o scans.csv
 ```
 
-**Configuration Fields:**
-- **enabled**: Set to `true` to enable email notifications
-- **host**: SMTP server hostname (e.g., `smtp.gmail.com`, `smtp.sendgrid.net`, custom server)
-- **port**: SMTP port (usually 587 for TLS or 465 for SSL)
-- **secure**: Use SSL/TLS (false for 587, true for 465)
-- **user**: SMTP authentication username
-- **pass**: SMTP authentication password (use app-specific password for Gmail)
-- **from**: Sender email address
-- **to**: Recipient email address
+## Data and privacy
 
-**Gmail Setup:**
-1. Enable 2-factor authentication on your Google account
-2. Generate an app-specific password: https://myaccount.google.com/apppasswords
-3. Use the 16-character password in the `pass` field
+Each scan stores: timestamp, item ID and name, IP address, approximate location (city, region, country), user agent, `Accept-Language` and referer. Scans are appended to `data/scans.jsonl`, one JSON object per line.
 
-**Custom SMTP:**
-Use your own mail server or third-party services like Mailgun, SendGrid, or Brevo with their SMTP credentials.
+IP addresses are personal data (GDPR): keep the log only as long as you need it.
 
-## Future Enhancements
+Geolocation uses the free ip-api.com endpoint: plain HTTP only, 45 requests per minute, non-commercial use only. Private and local IPs are not looked up.
 
-- [ ] SQLite support for persistent storage
-- [ ] Web UI for viewing scans
-- [ ] Multiple admin users with roles
-- [x] Email notifications
-- [x] Data export (CSV, JSON)
-- [ ] Map visualization of scan locations
+## License
+
+MIT
