@@ -30,14 +30,13 @@ The app refuses to start without `config.json` or with an empty/default `ADMIN_T
 `data/items.csv` lists the tags that trigger notifications:
 
 ```csv
-id,name,url
-K001,Trousseau de clés,https://tagd.example.com/i/K001
-BP001,Sac à dos rouge,https://tagd.example.com/i/BP001
+id,name,url,court
+0000,Cellphone,HTTPS://LOST.TLD.FR/I/0000,lost.tld.fr/i/0000
 ```
 
 - `id` and `name` are required. IDs are case-insensitive.
 - Extra columns are ignored: the `url` column is there so label printing software can bind the QR code to the full URL rather than to the bare ID.
-- `,` and `;` separators both work (Excel with a French locale saves with `;`).
+- `url` and `court` are optional, they are used to generate the QR code for the `.lbx` file. If you don't need a label, you can leave them empty.
 - Restart the app after editing the file.
 
 Each QR code points to `https://your-domain/i/<id>`. Tip: an all-uppercase URL (`HTTPS://TAGD.EXAMPLE.COM/I/K001`) lets the QR encoder use alphanumeric mode, which gives a smaller, easier to scan code on small labels.
@@ -85,10 +84,4 @@ curl -H "x-admin-token: $TOKEN" "https://tagd.example.com/api/scans?format=csv" 
 
 Each scan stores: timestamp, item ID and name, IP address, approximate location (city, region, country), user agent, `Accept-Language` and referer. Scans are appended to `data/scans.jsonl`, one JSON object per line.
 
-IP addresses are personal data (GDPR): keep the log only as long as you need it.
-
 Geolocation uses the free ip-api.com endpoint: plain HTTP only, 45 requests per minute, non-commercial use only. Private and local IPs are not looked up.
-
-## License
-
-MIT
